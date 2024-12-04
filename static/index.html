@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Mirador V1</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #4CAF50;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%; /* La tabla ocupa el 100% del contenedor */
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        table th, table td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+            word-wrap: break-word; /* Ajusta el contenido largo */
+        }
+        table th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f4f4f4;
+            color: #666;
+        }
+    </style>
+    <script>
+        async function generarGastos() {
+            const año = document.getElementById('año').value;
+            const mes = document.getElementById('mes').value || null;
+            const monto = document.getElementById('monto').value;
+
+            const response = await fetch('/generar_gastos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ año, mes, monto })
+            });
+
+            const result = await response.json();
+            mostrarResultado(result);
+        }
+
+        async function registrarPago() {
+            const departamento = document.getElementById('departamento').value;
+            const año = document.getElementById('pagoAño').value;
+            const mes = document.getElementById('pagoMes').value;
+            const fecha_pago = document.getElementById('fechaPago').value;
+
+            const response = await fetch('/registrar_pago', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ departamento, año, mes, fecha_pago })
+            });
+
+            const result = await response.json();
+            mostrarResultado(result);
+        }
+
+        async function listarPendientes() {
+            const hasta_año = document.getElementById('pendienteAño').value;
+            const hasta_mes = document.getElementById('pendienteMes').value;
+
+            const response = await fetch(`/listar_pendientes?hasta_año=${hasta_año}&hasta_mes=${hasta_mes}`);
+            const result = await response.json();
+            mostrarTabla(result, ['Departamento', 'Año', 'Mes', 'Monto']);
+        }
+
+        async function consultarGastos() {
+            const departamento = document.getElementById('consultaDepartamento').value;
+
+            const response = await fetch(`/consultar_gastos?departamento=${departamento}`);
+            const result = await response.json();
+            mostrarTabla(result, ['Año', 'Mes', 'Monto', 'Pagado', 'Mes Pago']);
+        }
+
+        function mostrarResultado(result) {
+    const tableContainer = document.getElementById('tableResults');
+    tableContainer.innerHTML = `
+        <div style="padding: 10px; background-color: ${result.estado === "Pago dentro del plazo" ? "#d4edda" : "#f8d7da"}; border: 1px solid ${result.estado === "Pago dentro del plazo" ? "#c3e6cb" : "#f5c6cb"}; border-radius: 5px;">
+            <strong>${result.estado}</strong><br>
+            ${result.mensaje}<br>
+            <strong>Departamento:</strong> ${result.departamento}<br>
+            <strong>Fecha de Pago:</strong> ${result.fecha_pago}
+        </div>
+    `;
+}
+
+function mostrarTabla(data, headers) {
+    const tableContainer = document.getElementById('tableResults');
+    tableContainer.innerHTML = ''; // Limpiar resultados anteriores
+
+    if (data.length > 0) {
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        const tbody = document.createElement('tbody');
+
+        // Crear encabezados
+        const headerRow = document.createElement('tr');
+        headers.forEach(header => {
+            const th = document.createElement('th');
+            th.textContent = header;
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+
+        // Crear filas
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            headers.forEach(header => {
+                const key = header.toLowerCase().replace(/ /g, '_');
+                const td = document.createElement('td');
+                td.textContent = row[key] !== undefined ? row[key] : 'N/A';
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        tableContainer.appendChild(table);
+    } else {
+        tableContainer.textContent = 'No se encontraron datos.';
+    }
+}
+
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Gestión de Gastos Comunes</h1>
+    </header>
+    <div class="container">
+        <h2>Generar Gastos Comunes</h2>
+        <div class="form-group">
+            <label>Año:</label>
+            <input type="number" id="año" placeholder="Ejemplo: 2024">
+        </div>
+        <div class="form-group">
+            <label>Mes (En blanco selecciona todo el año):</label>
+            <input type="number" id="mes" placeholder="Ejemplo: 5">
+        </div>
+        <div class="form-group">
+            <label>Monto:</label>
+            <input type="number" id="monto" placeholder="Ejemplo: 50000">
+        </div>
+        <button onclick="generarGastos()">Generar</button>
+
+        <h2>Registrar Pago</h2>
+        <div class="form-group">
+            <label>Departamento:</label>
+            <input type="text" id="departamento" placeholder="Ejemplo: 001">
+        </div>
+        <div class="form-group">
+            <label>Año:</label>
+            <input type="number" id="pagoAño" placeholder="Ejemplo: 2024">
+        </div>
+        <div class="form-group">
+            <label>Mes:</label>
+            <input type="number" id="pagoMes" placeholder="Ejemplo: 5">
+        </div>
+        <div class="form-group">
+            <label>Fecha de Pago:</label>
+            <input type="date" id="fechaPago">
+        </div>
+        <button onclick="registrarPago()">Registrar</button>
+
+        <h2>Listar Pendientes</h2>
+        <div class="form-group">
+            <label>Hasta Año:</label>
+            <input type="number" id="pendienteAño" placeholder="Ejemplo: 2024">
+        </div>
+        <div class="form-group">
+            <label>Hasta Mes:</label>
+            <input type="number" id="pendienteMes" placeholder="Ejemplo: 5">
+        </div>
+        <button onclick="listarPendientes()">Listar</button>
+
+        <h2>Consultar Gastos</h2>
+        <div class="form-group">
+            <label>Departamento:</label>
+            <input type="text" id="consultaDepartamento" placeholder="Ejemplo: 001">
+        </div>
+        <button onclick="consultarGastos()">Consultar</button>
+
+        <div id="tableResults" class="results"></div>
+    </div>
+    <footer>
+        <p>© 2024El Mirador V1</p>
+    </footer>
+</body>
+</html>
